@@ -8,5 +8,5 @@ include_directories(include)
 add_executable(Component_for_basic_cryptographic_operations
         include/1.h
         src/1.cpp
-        UnitTests/UnitTest1.cpp
+        tests/test1.cpp
         main.cpp)
