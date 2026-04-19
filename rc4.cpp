@@ -1,91 +1,78 @@
+#include "rc4.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <iomanip>
 
-class RC4 {
-private:
-    unsigned char S[256];
-    int i, j;
-
-    void init(const std::string& key) {
-        // Инициализация S-box
-        for (int k = 0; k < 256; k++) {
-            S[k] = k;
-        }
-
-        // KSA - Key Scheduling Algorithm
-        j = 0;
-        for (int k = 0; k < 256; k++) {
-            j = (j + S[k] + key[k % key.length()]) % 256;
-            std::swap(S[k], S[j]);
-        }
-
-        // Сброс счетчиков для PRGA
-        i = 0;
-        j = 0;
+void RC4::init(const std::string& key) {
+    for (int k = 0; k < 256; k++) {
+        S[k] = k;
     }
 
-    unsigned char generateByte() {
-        // PRGA - Pseudo-Random Generation Algorithm
-        i = (i + 1) % 256;
-        j = (j + S[i]) % 256;
-        std::swap(S[i], S[j]);
-        return S[(S[i] + S[j]) % 256];
+    j = 0;
+    for (int k = 0; k < 256; k++) {
+        j = (j + S[k] + key[k % key.length()]) % 256;
+        std::swap(S[k], S[j]);
     }
 
-public:
-    RC4(const std::string& key) {
-        init(key);
+    i = 0;
+    j = 0;
+}
+
+unsigned char RC4::generateByte() {
+    i = (i + 1) % 256;
+    j = (j + S[i]) % 256;
+    std::swap(S[i], S[j]);
+    return S[(S[i] + S[j]) % 256];
+}
+
+RC4::RC4(const std::string& key) {
+    init(key);
+}
+
+std::string RC4::decryptString(const std::string& ciphertext) {
+    std::string result;
+    for (char c : ciphertext) {
+        unsigned char keystream = generateByte();
+        result += c ^ keystream;
+    }
+    return result;
+}
+
+void RC4::decryptFile(const std::string& inputFile, const std::string& outputFile) {
+    std::ifstream inFile(inputFile, std::ios::binary);
+    std::ofstream outFile(outputFile, std::ios::binary);
+
+    if (!inFile.is_open()) {
+        throw std::runtime_error("Не удалось открыть входной файл: " + inputFile);
     }
 
-    // Дешифрование строки
-    std::string decryptString(const std::string& ciphertext) {
-        std::string result;
-        for (char c : ciphertext) {
+    if (!outFile.is_open()) {
+        throw std::runtime_error("Не удалось открыть выходной файл: " + outputFile);
+    }
+
+    char buffer[4096];
+    while (inFile.read(buffer, sizeof(buffer)) || inFile.gcount() > 0) {
+        for (std::streamsize k = 0; k < inFile.gcount(); k++) {
             unsigned char keystream = generateByte();
-            result += c ^ keystream;
+            buffer[k] = buffer[k] ^ keystream;
         }
-        return result;
+        outFile.write(buffer, inFile.gcount());
     }
 
-    // Дешифрование файла
-    void decryptFile(const std::string& inputFile, const std::string& outputFile) {
-        std::ifstream inFile(inputFile, std::ios::binary);
-        std::ofstream outFile(outputFile, std::ios::binary);
+    inFile.close();
+    outFile.close();
+}
 
-        if (!inFile.is_open()) {
-            throw std::runtime_error("Не удалось открыть входной файл: " + inputFile);
-        }
-
-        if (!outFile.is_open()) {
-            throw std::runtime_error("Не удалось открыть выходной файл: " + outputFile);
-        }
-
-        char buffer[4096];
-        while (inFile.read(buffer, sizeof(buffer)) || inFile.gcount() > 0) {
-            for (std::streamsize k = 0; k < inFile.gcount(); k++) {
-                unsigned char keystream = generateByte();
-                buffer[k] = buffer[k] ^ keystream;
-            }
-            outFile.write(buffer, inFile.gcount());
-        }
-
-        inFile.close();
-        outFile.close();
+std::vector<unsigned char> RC4::decryptBytes(const std::vector<unsigned char>& ciphertext) {
+    std::vector<unsigned char> result(ciphertext.size());
+    for (size_t k = 0; k < ciphertext.size(); k++) {
+        unsigned char keystream = generateByte();
+        result[k] = ciphertext[k] ^ keystream;
     }
-
-    // Дешифрование вектора байт
-    std::vector<unsigned char> decryptBytes(const std::vector<unsigned char>& ciphertext) {
-        std::vector<unsigned char> result(ciphertext.size());
-        for (size_t k = 0; k < ciphertext.size(); k++) {
-            unsigned char keystream = generateByte();
-            result[k] = ciphertext[k] ^ keystream;
-        }
-        return result;
-    }
-};
+    return result;
+}
 
 int main() {
     setlocale(LC_ALL, "Russian");
@@ -133,7 +120,6 @@ int main() {
             std::cout << "Введите hex строку: ";
             std::getline(std::cin, hexString);
 
-            // Конвертация hex в байты
             std::vector<unsigned char> ciphertext;
             for (size_t i = 0; i < hexString.length(); i += 2) {
                 std::string byteString = hexString.substr(i, 2);
@@ -149,7 +135,6 @@ int main() {
         default:
             std::cout << "Неверный выбор!" << std::endl;
         }
-
     }
     catch (const std::exception& e) {
         std::cerr << "Ошибка: " << e.what() << std::endl;
