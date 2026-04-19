@@ -1,30 +1,28 @@
 #ifndef RC4_H
 #define RC4_H
 
-#include <vector>
 #include <string>
+#include <vector>
 
 class RC4 {
 private:
-    unsigned char S[256];  // S-box
-    int i, j;              // состояние для генерации keystream
+    unsigned char S[256];
+    int i, j;
 
-    void initSBox(const std::vector<unsigned char>& key);
-    unsigned char generateKeystreamByte();
+    void init(const std::string& key);
+    unsigned char generateByte();
 
 public:
-    RC4();
-    RC4(const std::vector<unsigned char>& key);
     RC4(const std::string& key);
 
-    void setKey(const std::vector<unsigned char>& key);
-    void setKey(const std::string& key);
+    // Дешифрование строки
+    std::string decryptString(const std::string& ciphertext);
 
-    // Только шифрование
-    std::vector<unsigned char> encrypt(const std::vector<unsigned char>& data);
-    std::vector<unsigned char> encrypt(const std::string& data);
+    // Дешифрование файла
+    void decryptFile(const std::string& inputFile, const std::string& outputFile);
 
-    void reset();
+    // Дешифрование вектора байт
+    std::vector<unsigned char> decryptBytes(const std::vector<unsigned char>& ciphertext);
 };
 
-#endif
+#endif // RC4_H
