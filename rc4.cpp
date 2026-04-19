@@ -1,142 +1,160 @@
-﻿#include "rc4.h"
-#include <algorithm>
 #include <iostream>
-#include <iomanip>
+#include <fstream>
+#include <vector>
 #include <string>
+#include <iomanip>
 
-using namespace std;
+class RC4 {
+private:
+    unsigned char S[256];
+    int i, j;
 
+    void init(const std::string& key) {
+        // Инициализация S-box
+        for (int k = 0; k < 256; k++) {
+            S[k] = k;
+        }
 
-RC4::RC4() {
-    i = 0;
-    j = 0;
-    fill(begin(S), end(S), 0);
-}
+        // KSA - Key Scheduling Algorithm
+        j = 0;
+        for (int k = 0; k < 256; k++) {
+            j = (j + S[k] + key[k % key.length()]) % 256;
+            std::swap(S[k], S[j]);
+        }
 
-RC4::RC4(const vector<unsigned char>& key) {
-    setKey(key);
-}
-
-RC4::RC4(const string& key) {
-    setKey(key);
-}
-
-void RC4::initSBox(const vector<unsigned char>& key) {
-    
-    for (int k = 0; k < 256; k++) {
-        S[k] = k;
+        // Сброс счетчиков для PRGA
+        i = 0;
+        j = 0;
     }
 
-    
-    int keyLen = key.size();
-    int j = 0;
-
-    for (int i = 0; i < 256; i++) {
-        j = (j + S[i] + key[i % keyLen]) % 256;
-        swap(S[i], S[j]);
+    unsigned char generateByte() {
+        // PRGA - Pseudo-Random Generation Algorithm
+        i = (i + 1) % 256;
+        j = (j + S[i]) % 256;
+        std::swap(S[i], S[j]);
+        return S[(S[i] + S[j]) % 256];
     }
 
-    
-    this->i = 0;
-    this->j = 0;
-}
-
-void RC4::setKey(const vector<unsigned char>& key) {
-    if (key.empty()) {
-        
-        vector<unsigned char> defaultKey = { 0, 1, 2, 3, 4, 5, 6, 7 };
-        initSBox(defaultKey);
-    }
-    else {
-        initSBox(key);
-    }
-}
-
-void RC4::setKey(const string& key) {
-    vector<unsigned char> keyBytes(key.begin(), key.end());
-    setKey(keyBytes);
-}
-
-unsigned char RC4::generateKeystreamByte() {
-    // Генерация следующего байта keystream
-    i = (i + 1) % 256;
-    j = (j + S[i]) % 256;
-    swap(S[i], S[j]);
-
-    int k = (S[i] + S[j]) % 256;
-    return S[k];
-}
-
-vector<unsigned char> RC4::encrypt(const vector<unsigned char>& data) {
-    vector<unsigned char> result;
-    result.reserve(data.size());
-
-    // Сохраняем текущее состояние
-    unsigned char savedS[256];
-    int savedI = i;
-    int savedJ = j;
-    copy(begin(S), end(S), begin(savedS));
-
-    // Шифрование: data XOR keystream
-    for (size_t k = 0; k < data.size(); k++) {
-        unsigned char keystreamByte = generateKeystreamByte();
-        result.push_back(data[k] ^ keystreamByte);
+public:
+    RC4(const std::string& key) {
+        init(key);
     }
 
-    // Восстанавливаем состояние
-    copy(begin(savedS), end(savedS), begin(S));
-    i = savedI;
-    j = savedJ;
-
-    return result;
-}
-
-vector<unsigned char> RC4::encrypt(const string& data) {
-    vector<unsigned char> dataBytes(data.begin(), data.end());
-    return encrypt(dataBytes);
-}
-
-void RC4::reset() {
-    i = 0;
-    j = 0;
-}
-
-
-void printHex(const vector<unsigned char>& data) {
-    for (unsigned char byte : data) {
-        cout << hex << setw(2) << setfill('0') << (int)byte;
+    // Дешифрование строки
+    std::string decryptString(const std::string& ciphertext) {
+        std::string result;
+        for (char c : ciphertext) {
+            unsigned char keystream = generateByte();
+            result += c ^ keystream;
+        }
+        return result;
     }
-    cout << dec << endl;
-}
 
-void printBytes(const vector<unsigned char>& data) {
-    for (unsigned char byte : data) {
-        cout << (int)byte << " ";
+    // Дешифрование файла
+    void decryptFile(const std::string& inputFile, const std::string& outputFile) {
+        std::ifstream inFile(inputFile, std::ios::binary);
+        std::ofstream outFile(outputFile, std::ios::binary);
+
+        if (!inFile.is_open()) {
+            throw std::runtime_error("Не удалось открыть входной файл: " + inputFile);
+        }
+
+        if (!outFile.is_open()) {
+            throw std::runtime_error("Не удалось открыть выходной файл: " + outputFile);
+        }
+
+        char buffer[4096];
+        while (inFile.read(buffer, sizeof(buffer)) || inFile.gcount() > 0) {
+            for (std::streamsize k = 0; k < inFile.gcount(); k++) {
+                unsigned char keystream = generateByte();
+                buffer[k] = buffer[k] ^ keystream;
+            }
+            outFile.write(buffer, inFile.gcount());
+        }
+
+        inFile.close();
+        outFile.close();
     }
-    cout << endl;
-}
+
+    // Дешифрование вектора байт
+    std::vector<unsigned char> decryptBytes(const std::vector<unsigned char>& ciphertext) {
+        std::vector<unsigned char> result(ciphertext.size());
+        for (size_t k = 0; k < ciphertext.size(); k++) {
+            unsigned char keystream = generateByte();
+            result[k] = ciphertext[k] ^ keystream;
+        }
+        return result;
+    }
+};
 
 int main() {
-    setlocale(LC_ALL, "ru");  
+    setlocale(LC_ALL, "Russian");
+    try {
+        std::string key;
+        int choice;
 
-   
-    cout << "Пример: Шифрование с разными ключами" << endl;
+        std::cout << "=== RC4 ДЕШИФРОВАНИЕ ===" << std::endl;
+        std::cout << "Введите ключ: ";
+        std::getline(std::cin, key);
 
-    string text = "Test Message";
-    string key1 = "key123";
-    string key2 = "key456";
+        std::cout << "Выберите режим:" << std::endl;
+        std::cout << "1. Дешифровать строку" << std::endl;
+        std::cout << "2. Дешифровать файл" << std::endl;
+        std::cout << "3. Дешифровать hex строку" << std::endl;
+        std::cout << "Ваш выбор: ";
+        std::cin >> choice;
+        std::cin.ignore();
 
-    RC4 rc4_a(key1);
-    RC4 rc4_b(key2);
+        RC4 rc4(key);
 
-    vector<unsigned char> encrypted1 = rc4_a.encrypt(text);
-    vector<unsigned char> encrypted2 = rc4_b.encrypt(text);
+        switch (choice) {
+        case 1: {
+            std::string ciphertext;
+            std::cout << "Введите зашифрованную строку: ";
+            std::getline(std::cin, ciphertext);
 
-    cout << "Исходный текст: " << text << endl;
-    cout << "С ключом \"" << key1 << "\" (hex): ";
-    printHex(encrypted1);
-    cout << "С ключом \"" << key2 << "\" (hex): ";
-    printHex(encrypted2);
-    system("pause");
+            std::string decrypted = rc4.decryptString(ciphertext);
+            std::cout << "\nРасшифрованный текст: " << decrypted << std::endl;
+            break;
+        }
+        case 2: {
+            std::string inputFile, outputFile;
+            std::cout << "Введите имя зашифрованного файла: ";
+            std::getline(std::cin, inputFile);
+            std::cout << "Введите имя для расшифрованного файла: ";
+            std::getline(std::cin, outputFile);
+
+            rc4.decryptFile(inputFile, outputFile);
+            std::cout << "\nФайл успешно расшифрован: " << outputFile << std::endl;
+            break;
+        }
+        case 3: {
+            std::string hexString;
+            std::cout << "Введите hex строку: ";
+            std::getline(std::cin, hexString);
+
+            // Конвертация hex в байты
+            std::vector<unsigned char> ciphertext;
+            for (size_t i = 0; i < hexString.length(); i += 2) {
+                std::string byteString = hexString.substr(i, 2);
+                unsigned char byte = (unsigned char)strtol(byteString.c_str(), nullptr, 16);
+                ciphertext.push_back(byte);
+            }
+
+            std::vector<unsigned char> decrypted = rc4.decryptBytes(ciphertext);
+            std::string result(decrypted.begin(), decrypted.end());
+            std::cout << "\nРасшифрованный текст: " << result << std::endl;
+            break;
+        }
+        default:
+            std::cout << "Неверный выбор!" << std::endl;
+        }
+
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Ошибка: " << e.what() << std::endl;
+        return 1;
+    }
+
     return 0;
 }
