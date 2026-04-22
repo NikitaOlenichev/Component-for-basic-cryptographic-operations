@@ -1,56 +1,73 @@
 //
 // Хранение и операции с большими целыми числами, выходящими за рамки стандартных типов C++.
+// Copyright (c) TheRunuwayDinosaur. All rights reserved.
+// (https://github.com/TheRunuwayDinosaur/GOST-R-34.10-12-Elliptic-Curve-Cryptography-/blob/main/sources/h/BigInteger.h).
 //
 
 #ifndef BIGINTEGER_H
 #define BIGINTEGER_H
 
-#include <vector>
+#include <iostream>
 #include <string>
+#include <vector>
 #include <cstdint>
 
-class BigInteger {
+class BigInteger{
 public:
     BigInteger();
-    BigInteger(uint64_t value);
-    BigInteger(const std::vector<uint8_t>& bytes, bool littleEndian = true);
+    BigInteger(std::string str);
+    BigInteger(int x);
+    BigInteger(unsigned int x);
+    BigInteger(long long x);
+    BigInteger(unsigned long long x);
 
-    std::vector<uint8_t> toBytes(size_t expectedSize = 0) const;
+    void set_number(std::string str);
+    void shift_right();
+    bool odd();
+    bool even();
+    void remove_leading_zeros();
+    void divide_by_2();
+
     std::string toString() const;
-    std::string toHex() const;
+    int log2() const;
 
-    BigInteger operator+(const BigInteger& other) const;
-    BigInteger operator-(const BigInteger& other) const;
-    BigInteger operator*(const BigInteger& other) const;
-    BigInteger operator/(const BigInteger& other) const;
-    BigInteger operator%(const BigInteger& other) const;
-    BigInteger abs() const;
+    BigInteger operator +() const;
+    BigInteger operator -() const;
 
-    BigInteger& operator+=(const BigInteger& other);
-    BigInteger& operator-=(const BigInteger& other);
-    BigInteger& operator*=(const BigInteger& other);
+    friend std::ostream& operator <<(std::ostream& os, const BigInteger& bi);
+    friend bool operator == (const BigInteger& left, const BigInteger& right);
+    friend bool operator < (const BigInteger& left, const BigInteger& right);
+    friend bool operator !=(const BigInteger& left, const BigInteger& right);
+    friend bool operator <=(const BigInteger& left, const BigInteger& right);
+    friend bool operator > (const BigInteger& left, const BigInteger& right);
+    friend bool operator >= (const BigInteger& left, const BigInteger& right);
 
-    bool operator==(const BigInteger& other) const;
-    bool operator!=(const BigInteger& other) const;
-    bool operator< (const BigInteger& other) const;
-    bool operator> (const BigInteger& other) const;
-    bool operator<=(const BigInteger& other) const;
-    bool operator>=(const BigInteger& other) const;
+    friend const BigInteger operator +(BigInteger left, const BigInteger& right);
+    friend const BigInteger operator -(BigInteger left, const BigInteger& right);
+    friend const BigInteger operator *(const BigInteger& left, const BigInteger& right);
+    friend const BigInteger operator /(const BigInteger& left, const BigInteger& right);
+    friend const BigInteger operator %(const BigInteger& left, const BigInteger& right);
 
-    BigInteger modPow(const BigInteger& exponent, const BigInteger& modulus) const;
-    BigInteger modInverse(const BigInteger& modulus) const;
-    BigInteger modMul(const BigInteger& other, const BigInteger& modulus) const;
+    BigInteger operator +=(const BigInteger &value);
+    BigInteger operator -=(const BigInteger &value);
+    BigInteger operator *= (const BigInteger &value);
+    BigInteger operator /= (const BigInteger &value);
+    BigInteger operator %= (const BigInteger &value);
 
-    static BigInteger random(const BigInteger& max);
-    static BigInteger fromBytes(const std::vector<uint8_t>& bytes, bool littleEndian = true);
+    BigInteger operator ++();
+    BigInteger operator ++(int);
+    BigInteger operator --();
+    BigInteger operator --(int);
 
-    int bitLength() const;
-    bool isZero() const;
-    void setBit(size_t position, bool value);
-    bool getBit(size_t position) const;
+    int BigInteger::to_int() const;
+    BigInteger operator<<(int shift) const;
+    std::vector<uint8_t> to_bytes(size_t size = 0) const;
+    static BigInteger from_bytes(const std::vector<uint8_t>& bytes, bool little_endian = true);
 
-    std::vector<uint64_t> data;
+private:
+    static const int BASE = 1000000000;
+    std::vector <int> numbers;
     bool isNegative;
 };
 
-#endif //BIGINTEGER_H
+#endif // BIGINTEGER_H
