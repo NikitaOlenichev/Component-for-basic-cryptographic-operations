@@ -1,49 +1,121 @@
 //
-// Генерирует ключевую пару, подписывает сообщение и проверяет подпись, используя алгоритм по ГОСТ Р 34.10-2012.
+// Основная логика УНЭП: генерация ключей, создание и проверка подписи.
+// Copyright (c) Andreyinthesky. All rights reserved.
+// (https://github.com/Andreyinthesky/cpp-cryptography/blob/master/algorithms/gost_signature.h).
 //
 
 #ifndef GOSTSIGNATURE_H
 #define GOSTSIGNATURE_H
 
-#include "BigInteger.h"
-#include "EllipticPoint.h"
+#include "GOSTSignature.h"
+#include "GOSTSignatureInc.h"
 #include <vector>
+#include <random>
+#include <ctime>
 
-class GOSTSignature {
+class SignaturePrivateKeyProvider {
 public:
-    GOSTSignature();
+    virtual BigInteger get_key() = 0;
+};
 
-    void generateKeyPair();
-    void setPrivateKey(const BigInteger& privateKey);
-    void setPublicKey(const EllipticPoint& publicKey);
+class SignaturePublicKeyProvider {
+public:
+    virtual ECPoint get_key() = 0;
+};
 
-    struct Signature {
+class SignatureProcessor {
+public:
+    std::vector<uint8_t> generate(std::vector<uint8_t> msg, SignaturePrivateKeyProvider* signature_key_provider) {
+        BigInteger key = signature_key_provider->get_key();
+        return generate(msg, key);
+    }
+
+    std::vector<uint8_t> generate(std::vector<uint8_t> msg, BigInteger signature_key) {
+        std::mt19937_64 rng(std::time(nullptr));
+        BigInteger k;
+        BigInteger e;
         BigInteger r;
         BigInteger s;
 
-        std::vector<uint8_t> toBytes() const;
-        static Signature fromBytes(const std::vector<uint8_t>& bytes);
-    };
+        ECPoint P(params.p, params.a, params.b, params.x, params.y);
+        e = getHash(msg);
 
-    Signature sign(const std::vector<uint8_t>& message) const;
-    bool verify(const std::vector<uint8_t>& message, const Signature& signature) const;
+        do {
+            k = getRandomNumber(params.q - 1) + 1;
+            ECPoint C = P * k;
+            r = ModMath::mod(C.x, params.q);
+        } while (r == 0);
 
-    const EllipticPoint& getPublicKey() const {
-        return publicKey;
+        s = ModMath::mod(r * signature_key + k * e, params.q);
+        if (s == 0)
+            return generate(msg, signature_key);
+
+        return make_signature(r, s);
     }
-    const BigInteger& getPrivateKey() const {
-        return privateKey;
-    }
 
-    static void initializeCurve(int bits = 256);
+    bool verify(std::vector<uint8_t> msg, std::vector<uint8_t> signature, SignaturePublicKeyProvider* public_key_provider) {
+        auto [r, s] = get_r_s(signature);
+        if (r <= 0 || r >= params.q || s <= 0 || s >= params.q)
+            return false;
+
+        ECPoint P(params.p, params.a, params.b, params.x, params.y);
+        BigInteger e = getHash(msg);
+        BigInteger v = ModMath::mul_inverse(e, params.q);
+        BigInteger z1 = ModMath::mod(s * v, params.q);
+        BigInteger z2 = ModMath::mod(-r * v, params.q);
+        ECPoint C = P * z1 + public_key_provider->get_key() * z2;
+
+        return ModMath::mod(C.x, params.q) == r;
+    }
 
 private:
-    BigInteger privateKey;
-    EllipticPoint publicKey;
+    SignatureParams params = SignatureParamsSet::CryptoPro_A;
+    HashLength hash_len = HashLength::b256;
 
-    static EllipticPoint generator;
-    static BigInteger p, a, b, q;
-    static bool curveInitialized;
+    BigInteger getRandomNumber(BigInteger max) {
+        std::mt19937_64 rng(std::time(nullptr));
+        BigInteger result;
+        do {
+            result = BigInteger(0);
+            for (int i = 0; i < 4; ++i) {
+                uint64_t r = rng();
+                result = result * (BigInteger(1) << 64) + BigInteger(r);
+            }
+        } while (result >= max);
+        return result;
+    }
+
+    BigInteger getHash(std::vector<uint8_t> msg) {
+        std::vector<uint8_t> hash;
+        if (hash_len == b256)
+            hash = Stribog::hash256(msg);
+        else
+            hash = Stribog::hash512(msg);
+        BigInteger result(0);
+        for (size_t i = 0; i < hash.size(); ++i) {
+            result = result * 256 + BigInteger((int)hash[i]);
+        }
+        return result;
+    }
+
+    std::vector<uint8_t> make_signature(BigInteger r, BigInteger s) {
+        std::vector<uint8_t> sign_vec;
+        auto r_bytes = r.to_bytes(32);
+        auto s_bytes = s.to_bytes(32);
+        sign_vec.insert(sign_vec.end(), r_bytes.begin(), r_bytes.end());
+        sign_vec.insert(sign_vec.end(), s_bytes.begin(), s_bytes.end());
+        return sign_vec;
+    }
+
+    std::pair<BigInteger, BigInteger> get_r_s(std::vector<uint8_t> signature) {
+        if (signature.size() < 64) throw std::runtime_error("Invalid signature size");
+        std::vector<uint8_t> r_bytes(signature.begin(), signature.begin() + 32);
+        std::vector<uint8_t> s_bytes(signature.begin() + 32, signature.begin() + 64);
+        BigInteger r = BigInteger::from_bytes(r_bytes);
+        BigInteger s = BigInteger::from_bytes(s_bytes);
+        return {r, s};
+    }
 };
+
 
 #endif //GOSTSIGNATURE_H
