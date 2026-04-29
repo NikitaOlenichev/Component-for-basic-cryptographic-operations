@@ -73,15 +73,17 @@ private:
     HashLength hash_len = HashLength::b256;
 
     BigInteger getRandomNumber(BigInteger max) {
-        std::mt19937_64 rng(std::time(nullptr));
+        static std::mt19937_64 rng(std::chrono::steady_clock::now().time_since_epoch().count());
         BigInteger result;
         do {
-            result = BigInteger(0);
-            for (int i = 0; i < 4; ++i) {
+            uint8_t bytes[32];
+            for (int i = 0; i < 32; i += 8) {
                 uint64_t r = rng();
-                result = result * (BigInteger(1) << 64) + BigInteger(r);
+                for (int j = 0; j < 8; ++j) bytes[i + j] = (r >> (j * 8)) & 0xFF;
             }
-        } while (result >= max);
+            result = BigInteger::from_bytes(std::vector<uint8_t>(bytes, bytes + 32), true);
+            result = result % max;
+        } while (result == 0);
         return result;
     }
 
@@ -100,6 +102,7 @@ private:
 
     std::vector<uint8_t> make_signature(BigInteger r, BigInteger s) {
         std::vector<uint8_t> sign_vec;
+        // Преобразование r и s в 32-байтные массивы (little-endian)
         auto r_bytes = r.to_bytes(32);
         auto s_bytes = s.to_bytes(32);
         sign_vec.insert(sign_vec.end(), r_bytes.begin(), r_bytes.end());
