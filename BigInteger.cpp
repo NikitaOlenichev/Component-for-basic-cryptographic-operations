@@ -8,14 +8,35 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+#include <cctype>
 
 #include "BigInteger.h"
 
 BigInteger::BigInteger(){
     this->isNegative = false;
+    this->numbers.push_back(0);
 }
 
 BigInteger::BigInteger(std::string str){
+    bool isHex = false;
+    size_t start = 0;
+    if (str.size() >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+        isHex = true;
+        start = 2;
+    } else {
+        bool onlyHexDigits = true;
+        for (char c : str) {
+            if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))) {
+                onlyHexDigits = false;
+                break;
+            }
+        }
+        if (onlyHexDigits && str.size() > 0) isHex = true;
+    }
+    if (isHex) {
+        *this = fromHex(str.substr(start));
+        return;
+    }
     this->set_number(str);
 }
 
@@ -63,6 +84,7 @@ void BigInteger::set_number(std::string str){
     this->numbers.clear();
     if (str.size() == 0) {
         this->isNegative = false;
+        this->numbers.push_back(0);
     }
     else{
         if (str[0] == '-') {
@@ -91,13 +113,17 @@ void BigInteger::shift_right(){
     this->numbers[0] = 0;
 }
 
-bool BigInteger::odd(){
-    if (this->numbers.size() == 0) return false;
-    return this->numbers[0] & 1;
+bool BigInteger::isOdd() const {
+    if (numbers.empty()) return false;
+    return (numbers[0] & 1) != 0;
 }
 
-bool BigInteger::even(){
-    return !this->odd();
+bool BigInteger::isEven() const {
+    return !isOdd();
+}
+
+int BigInteger::getLowestBit() const {
+    return isOdd() ? 1 : 0;
 }
 
 void BigInteger::remove_leading_zeros(){
@@ -106,13 +132,14 @@ void BigInteger::remove_leading_zeros(){
 }
 
 void BigInteger::divide_by_2(){
-    int add = 0;
-    for (int i = this->numbers.size() - 1;i >= 0;i--){
-        int digit = (this->numbers[i] >> 1) + add;
-        add = ((this->numbers[i] & 1) * (this->BASE / 2));
-        this->numbers[i] = digit;
+    if (numbers.empty()) return;
+    int carry = 0;
+    for (int i = (int)numbers.size() - 1; i >= 0; --i) {
+        long long cur = (long long)numbers[i] + carry * (long long)BASE;
+        numbers[i] = (int)(cur / 2);
+        carry = (int)(cur % 2);
     }
-    this->remove_leading_zeros();
+    remove_leading_zeros();
 }
 
 std::string BigInteger::toString() const {
@@ -205,7 +232,11 @@ const BigInteger operator +(BigInteger left, const BigInteger& right) {
         }
         return left;
     }
-    return left - (-right);
+    if (left.isNegative) {
+        return right - (-left);
+    } else {
+        return left - (-right);
+    }
 }
 
 const BigInteger operator -(BigInteger left, const BigInteger& right) {
@@ -275,7 +306,34 @@ const BigInteger operator /(const BigInteger& left, const BigInteger& right) {
 }
 
 const BigInteger operator %(const BigInteger& left, const BigInteger& right) {
-    return left - (left / right) * right;
+    if (right == 0) throw std::runtime_error("Division by zero");
+    BigInteger b = right;
+    b.isNegative = false;
+    BigInteger a = left;
+    a.isNegative = false;
+    if (a < b) return left.isNegative ? -a : a;
+    BigInteger remainder = 0;
+    for (int i = (int)a.numbers.size() - 1; i >= 0; --i) {
+        if (!(remainder.numbers.size() == 1 && remainder.numbers[0] == 0)) {
+            remainder.numbers.insert(remainder.numbers.begin(), a.numbers[i]);
+        } else {
+            remainder.numbers[0] = a.numbers[i];
+        }
+        remainder.remove_leading_zeros();
+        if (remainder >= b) {
+            int x = 0, l = 0, r = BigInteger::BASE - 1;
+            while (l <= r) {
+                int m = l + (r - l) / 2;
+                if (b * m <= remainder) {
+                    x = m;
+                    l = m + 1;
+                } else r = m - 1;
+            }
+            remainder = remainder - b * x;
+        }
+    }
+    remainder.isNegative = left.isNegative;
+    return remainder;
 }
 
 BigInteger BigInteger::operator +=(const BigInteger &value){
@@ -352,4 +410,28 @@ BigInteger BigInteger::from_bytes(const std::vector<uint8_t>& bytes, bool little
         }
     }
     return result;
+}
+
+static std::vector<uint8_t> hexToBytes(const std::string& hex) {
+    std::vector<uint8_t> bytes;
+    for (size_t i = 0; i < hex.length(); i += 2) {
+        std::string byteStr = hex.substr(i, 2);
+        uint8_t byte = static_cast<uint8_t>(std::stoi(byteStr, nullptr, 16));
+        bytes.push_back(byte);
+    }
+    return bytes;
+}
+
+BigInteger BigInteger::fromHex(const std::string& hex) {
+    std::vector<uint8_t> bytes = hexToBytes(hex);
+    return from_bytes(bytes, true);
+}
+
+std::string BigInteger::toHex() const {
+    auto bytes = to_bytes();
+    std::stringstream ss;
+    for (uint8_t b : bytes) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+    }
+    return ss.str();
 }
