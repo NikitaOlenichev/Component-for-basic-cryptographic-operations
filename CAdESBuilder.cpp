@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include <ctime>
+#include <stdexcept>
 
 std::vector<uint8_t> CAdESBuilder::buildCAdES_BES(const SignatureData &data) {
     std::vector<std::vector<uint8_t>> signerInfoComponents;
@@ -53,16 +54,32 @@ std::vector<uint8_t> CAdESBuilder::buildCAdES_BES(const SignatureData &data) {
 std::vector<uint8_t> CAdESBuilder::encodeInteger(int value) {
     std::vector<uint8_t> result;
     result.push_back(0x02);
-    if (value < 128) {
+    if (value == 0) {
         result.push_back(1);
-        result.push_back(value);
+        result.push_back(0);
     } else {
-        // реализовать для больших значений
-        result.push_back(4);
-        result.push_back((value >> 24) & 0xFF);
-        result.push_back((value >> 16) & 0xFF);
-        result.push_back((value >> 8) & 0xFF);
-        result.push_back(value & 0xFF);
+        bool negative = (value < 0);
+        uint32_t absVal = negative ? -value : value;
+        std::vector<uint8_t> bytes;
+        while (absVal > 0) {
+            bytes.push_back(absVal & 0xFF);
+            absVal >>= 8;
+        }
+        if (bytes.back() & 0x80)
+            bytes.push_back(0x00);
+        if (negative) {
+            for (auto& b : bytes)
+                b = ~b;
+            for (size_t i = 0; i < bytes.size(); i++) {
+                bytes[i] += 1;
+                if (bytes[i] != 0)
+                    break;
+            }
+        }
+        std::reverse(bytes.begin(), bytes.end());
+        auto lenEnc = encodeLength(bytes.size());
+        result.insert(result.end(), lenEnc.begin(), lenEnc.end());
+        result.insert(result.end(), bytes.begin(), bytes.end());
     }
     return result;
 }
@@ -94,12 +111,21 @@ std::vector<uint8_t> CAdESBuilder::encodeObjectIdentifier(const std::string &oid
         if (value < 128) {
             encoded.push_back(value);
         } else {
-            // реализовать кодирование для больших значений
+            std::vector<uint8_t> tmp;
+            while (value > 0) {
+                tmp.push_back(value & 0x7F);
+                value >>= 7;
+            }
+            std::reverse(tmp.begin(), tmp.end());
+            for (size_t j = 0; j < tmp.size(); j++) {
+                if (j != tmp.size() - 1)
+                    tmp[j] |= 0x80;
+                encoded.push_back(tmp[j]);
+            }
         }
     }
-
-    std::vector<uint8_t> length = encodeLength(encoded.size());
-    result.insert(result.end(), length.begin(), length.end());
+    auto lenEnc = encodeLength(encoded.size());
+    result.insert(result.end(), lenEnc.begin(), lenEnc.end());
     result.insert(result.end(), encoded.begin(), encoded.end());
     return result;
 }
@@ -162,11 +188,20 @@ std::vector<uint8_t> CAdESBuilder::encodeLength(size_t length) {
     std::vector<uint8_t> result;
     if (length < 128) {
         result.push_back(static_cast<uint8_t>(length));
-    } else {
-        // реализовать для больших длин
+    } else if (length < 256) {
         result.push_back(0x81);
         result.push_back(static_cast<uint8_t>(length));
+    } else if (length < 65536) {
+        result.push_back(0x82);
+        result.push_back(static_cast<uint8_t>((length >> 8) & 0xFF));
+        result.push_back(static_cast<uint8_t>(length & 0xFF));
+    } else {
+        result.push_back(0x83);
+        result.push_back(static_cast<uint8_t>((length >> 16) & 0xFF));
+        result.push_back(static_cast<uint8_t>((length >> 8) & 0xFF));
+        result.push_back(static_cast<uint8_t>(length & 0xFF));
     }
 
     return result;
 }
+
