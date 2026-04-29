@@ -23,8 +23,9 @@ public:
 
     void set_number(std::string str);
     void shift_right();
-    bool odd();
-    bool even();
+    bool isOdd() const;
+    bool isEven() const;
+    int getLowestBit() const;
     void remove_leading_zeros();
     void divide_by_2();
 
@@ -59,13 +60,15 @@ public:
     BigInteger operator --();
     BigInteger operator --(int);
 
-    int BigInteger::to_int() const;
+    int to_int() const;
     BigInteger operator<<(int shift) const;
     std::vector<uint8_t> to_bytes(size_t size = 0) const;
     static BigInteger from_bytes(const std::vector<uint8_t>& bytes, bool little_endian = true);
+    static BigInteger fromHex(const std::string& hex);
+    std::string toHex() const;
 
 private:
-    static const int BASE = 1000000000;
+    static const long long BASE = 1000000000;
     std::vector <int> numbers;
     bool isNegative;
 };
