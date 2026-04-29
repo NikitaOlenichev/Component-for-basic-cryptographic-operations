@@ -13,39 +13,42 @@
 #include <tuple>
 
 class ModMath {
-private:
-    static std::tuple<BigInteger, BigInteger, BigInteger> ext_euclidean_algorithm(BigInteger a, BigInteger b) {
-        BigInteger s = 0;
-        BigInteger old_s = 1;
-        BigInteger t = 1;
-        BigInteger old_t = 0;
-        BigInteger r = b;
-        BigInteger old_r = a;
-        while (r != 0) {
-            BigInteger quotient = old_r / r;
-            BigInteger temp = r;
-            r = old_r - quotient * r;
-            old_r = temp;
-
-            temp = s;
-            s = old_s - quotient * s;
-            old_s = temp;
-
-            temp = t;
-            t = old_t - quotient * t;
-            old_t = temp;
-        }
-        return std::make_tuple(old_r, old_s, old_t);
-    }
-
 public:
-    static BigInteger mul_inverse(BigInteger n, BigInteger p) {
-        if (n < 0)
-            return p - mul_inverse(-n, p);
-        auto [gcd, x, y] = ext_euclidean_algorithm(n, p);
-        if (gcd != 1)
-            throw std::domain_error("has no multiplicative inverse");
-        return mod(x, p);
+    static BigInteger mul_inverse(BigInteger a, BigInteger n) {
+        BigInteger u = mod(a, n);
+        BigInteger v = n;
+        BigInteger x1 = 1;
+        BigInteger x2 = 0;
+
+        while (u != 1 && v != 1) {
+            while (u.isEven()) {
+                u.divide_by_2();
+                if (x1.isEven()) {
+                    x1.divide_by_2();
+                } else {
+                    x1 = (x1 + n);
+                    x1.divide_by_2();
+                }
+            }
+            while (v.isEven()) {
+                v.divide_by_2();
+                if (x2.isEven()) {
+                    x2.divide_by_2();
+                } else {
+                    x2 = (x2 + n);
+                    x2.divide_by_2();
+                }
+            }
+            if (u >= v) {
+                u = u - v;
+                x1 = x1 - x2;
+            } else {
+                v = v - u;
+                x2 = x2 - x1;
+            }
+        }
+        BigInteger res = (u == 1) ? x1 : x2;
+        return mod(res, n);
     }
 
     static BigInteger mod(BigInteger n, BigInteger p) {
@@ -99,14 +102,17 @@ public:
         return ECPoint(p, a, b, x3, y3);
     }
 
-    ECPoint operator*(BigInteger n) const {
+    ECPoint operator*(const BigInteger& n) const {
+        if (n == 0) return ECPoint(p, a, b, 0, 0);
         ECPoint result = ECPoint(p, a, b, 0, 0);
-        ECPoint point = *this;
-        while (n != 0) {
-            if (n.odd())
-                result = result + point;
-            point = point + point;
-            n = n / 2;
+        ECPoint base = *this;
+        BigInteger exp = n;
+        while (exp != 0) {
+            if (exp.isOdd()) {
+                result = result + base;
+            }
+            base = base + base;
+            exp.divide_by_2();
         }
         return result;
     }
