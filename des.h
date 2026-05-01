@@ -7,21 +7,18 @@
 
 class DES {
 public:
-    // Шифрование одного 64-битного блока
-    static uint64_t encrypt(uint64_t block, uint64_t key);
-    
     // Дешифрование одного 64-битного блока
     static uint64_t decrypt(uint64_t block, uint64_t key);
+    
+    // Дешифрование строки (автоматически разбивает на блоки по 8 байт)
+    static std::string decryptString(const std::string& ciphertext, uint64_t key);
     
     // Вспомогательные функции для работы со строками
     static uint64_t stringToBlock(const std::string& str);
     static std::string blockToString(uint64_t block);
     
-    // Шифрование строки (автоматически разбивает на блоки по 8 байт)
-    static std::string encryptString(const std::string& plaintext, uint64_t key);
-    
-    // Дешифрование строки (автоматически разбивает на блоки по 8 байт)
-    static std::string decryptString(const std::string& ciphertext, uint64_t key);
+    // Преобразование строки hex в число
+    static uint64_t hexToBlock(const std::string& hex);
 
 private:
     // Таблицы перестановок
