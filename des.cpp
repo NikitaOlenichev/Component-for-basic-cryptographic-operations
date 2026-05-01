@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <bitset>
 #include <cstdint>
 #include <string>
 #include <iomanip>
@@ -174,8 +173,13 @@ vector<uint64_t> makeKeys(uint64_t key) {
     return keys;
 }
 
-// Основная функция обработки блока (шифрование/дешифрование)
-uint64_t processBlock(uint64_t block, const vector<uint64_t>& keys) {
+// Основная функция дешифрования блока
+uint64_t decryptBlock(uint64_t block, uint64_t key) {
+    // Генерируем ключи
+    vector<uint64_t> keys = makeKeys(key);
+    // Для дешифрования используем ключи в обратном порядке
+    reverse(keys.begin(), keys.end());
+    
     // Начальная перестановка
     uint64_t permBlock = permute(block, IP, 64);
     
@@ -229,29 +233,15 @@ uint64_t processBlock(uint64_t block, const vector<uint64_t>& keys) {
     return permute(preOut, FP, 64);
 }
 
-// Шифрование блока
-uint64_t encryptBlock(uint64_t block, uint64_t key) {
-    vector<uint64_t> keys = makeKeys(key);
-    return processBlock(block, keys);
-}
-
-// Дешифрование блока
-uint64_t decryptBlock(uint64_t block, uint64_t key) {
-    vector<uint64_t> keys = makeKeys(key);
-    // Для дешифрования используем ключи в обратном порядке
-    reverse(keys.begin(), keys.end());
-    return processBlock(block, keys);
-}
-
-// Преобразование строки в число
-uint64_t strToBlock(const string& str) {
+// Преобразование строки hex в число
+uint64_t hexToBlock(const string& hex) {
     uint64_t block = 0;
-    for (size_t i = 0; i < min(str.length(), size_t(8)); i++) {
-        block = (block << 8) | (unsigned char)str[i];
-    }
-    // Дополняем нулями если меньше 8 байт
-    if (str.length() < 8) {
-        block <<= (8 - str.length()) * 8;
+    for (char c : hex) {
+        if (c == ' ') continue;
+        block <<= 4;
+        if (c >= '0' && c <= '9') block |= (c - '0');
+        else if (c >= 'a' && c <= 'f') block |= (c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F') block |= (c - 'A' + 10);
     }
     return block;
 }
@@ -268,70 +258,20 @@ string blockToStr(uint64_t block) {
     return result;
 }
 
-// Шифрование строки
-string encryptString(const string& text, uint64_t key) {
-    vector<uint64_t> keys = makeKeys(key);
-    string result;
-    
-    for (size_t i = 0; i < text.length(); i += 8) {
-        string chunk = text.substr(i, 8);
-        uint64_t block = strToBlock(chunk);
-        uint64_t encrypted = processBlock(block, keys);
-        
-        // Добавляем зашифрованный блок как 8 байт
-        for (int j = 7; j >= 0; j--) {
-            result += (unsigned char)((encrypted >> (j * 8)) & 0xFF);
-        }
-    }
-    
-    return result;
-}
-
-// Дешифрование строки
-string decryptString(const string& text, uint64_t key) {
-    if (text.length() % 8 != 0) {
-        cout << "Ошибка: длина зашифрованного текста должна быть кратна 8!" << endl;
-        return "";
-    }
-    
-    vector<uint64_t> keys = makeKeys(key);
-    reverse(keys.begin(), keys.end());
-    string result;
-    
-    for (size_t i = 0; i < text.length(); i += 8) {
-        string chunk = text.substr(i, 8);
-        uint64_t block = strToBlock(chunk);
-        uint64_t decrypted = processBlock(block, keys);
-        result += blockToStr(decrypted);
-    }
-    
-    return result;
-}
-
 // Вывод блока в hex
 void printHex(uint64_t block) {
     cout << hex << setw(16) << setfill('0') << block << dec;
-}
-
-// Вывод байтов строки в hex
-void printBytes(const string& str) {
-    for (unsigned char c : str) {
-        cout << hex << setw(2) << setfill('0') << (int)c << " ";
-    }
-    cout << dec;
 }
 
 // Главная функция
 int main() {
     setlocale(LC_ALL, "");
     
-    cout << "=== ПРОГРАММА ШИФРОВАНИЯ/ДЕШИФРОВАНИЯ DES ===\n\n";
+    cout << "=== ПРОГРАММА ДЕШИФРОВАНИЯ DES ===\n\n";
     
     while (true) {
         cout << "\nВыберите действие:\n";
-        cout << "1 - Зашифровать текст\n";
-        cout << "2 - Расшифровать текст\n";
-        cout << "3 - Тест (зашифровать и сразу расшифровать)\n";
+        cout << "1 - Расшифровать блок\n";
         cout << "0 - Выход\n";
         cout << "Ваш выбор: ";
         
@@ -342,95 +282,27 @@ int main() {
         if (choice == 0) break;
         
         if (choice == 1) {
-            // Шифрование
-            string text;
-            uint64_t key;
-            
-            cout << "Введите текст (до 8 символов для одного блока): ";
-            getline(cin, text);
-            
-            cout << "Введите ключ (число): ";
-            cin >> key;
-            
-            cout << "\n--- Шифрование ---\n";
-            
-            if (text.length() <= 8) {
-                // Один блок
-                uint64_t block = strToBlock(text);
-                cout << "Исходный блок: 0x";
-                printHex(block);
-                cout << endl;
-                
-                uint64_t encrypted = encryptBlock(block, key);
-                cout << "Зашифрованный блок: 0x";
-                printHex(encrypted);
-                cout << endl;
-            } else {
-                // Несколько блоков
-                string encrypted = encryptString(text, key);
-                cout << "Зашифрованный текст (hex): ";
-                printBytes(encrypted);
-                cout << endl;
-            }
-        }
-        else if (choice == 2) {
-            // Дешифрование
-            string text;
+            string hexBlock;
             uint64_t key;
             
             cout << "Введите зашифрованный блок (hex, например: a1b2c3d4e5f67890): ";
-            getline(cin, text);
+            getline(cin, hexBlock);
             
             cout << "Введите ключ (число): ";
             cin >> key;
             
             cout << "\n--- Дешифрование ---\n";
             
-            // Преобразуем hex в блок
-            uint64_t block = 0;
-            for (char c : text) {
-                if (c == ' ') continue;
-                block <<= 4;
-                if (c >= '0' && c <= '9') block |= (c - '0');
-                else if (c >= 'a' && c <= 'f') block |= (c - 'a' + 10);
-                else if (c >= 'A' && c <= 'F') block |= (c - 'A' + 10);
-            }
+            uint64_t block = hexToBlock(hexBlock);
+            cout << "Зашифрованный блок: 0x";
+            printHex(block);
+            cout << endl;
             
             uint64_t decrypted = decryptBlock(block, key);
             cout << "Расшифрованный блок: 0x";
             printHex(decrypted);
             cout << endl;
-            cout << "Расшифрованный текст: " << blockToStr(decrypted) << endl;
-        }
-        else if (choice == 3) {
-            // Тест
-            string text;
-            uint64_t key;
-            
-            cout << "Введите текст для теста: ";
-            getline(cin, text);
-            
-            cout << "Введите ключ (число): ";
-            cin >> key;
-            
-            cout << "\n--- Тест шифрования/дешифрования ---\n";
-            cout << "Исходный текст: " << text << endl;
-            
-            // Шифруем
-            string encrypted = encryptString(text, key);
-            cout << "Зашифровано (hex): ";
-            printBytes(encrypted);
-            cout << endl;
-            
-            // Дешифруем
-            string decrypted = decryptString(encrypted, key);
-            cout << "Расшифровано: " << decrypted << endl;
-            
-            if (text == decrypted) {
-                cout << "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!\n";
-            } else {
-                cout << "❌ ОШИБКА: текст не совпадает!\n";
-            }
+            cout << "Расшифрованный текст: \"" << blockToStr(decrypted) << "\"" << endl;
         }
         
         cout << "\nНажмите Enter чтобы продолжить...";
