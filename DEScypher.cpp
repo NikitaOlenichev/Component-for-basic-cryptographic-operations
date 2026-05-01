@@ -1,13 +1,11 @@
-#include <iostream>
-#include <vector>
-#include <bitset>
-#include <cstdint>
-#include <string>
-#include <iomanip>
+#include "DEScypher.h"
+#include <algorithm>
+#include <cstring>
+
 using namespace std;
 
 // Initial Permutation (IP)
-const int IP[64] = {
+const int DEScypher::IP[64] = {
     58, 50, 42, 34, 26, 18, 10, 2,
     60, 52, 44, 36, 28, 20, 12, 4,
     62, 54, 46, 38, 30, 22, 14, 6,
@@ -19,7 +17,7 @@ const int IP[64] = {
 };
 
 // Expansion table (E)
-const int E[48] = {
+const int DEScypher::E[48] = {
     32, 1, 2, 3, 4, 5,
     4, 5, 6, 7, 8, 9,
     8, 9, 10, 11, 12, 13,
@@ -31,7 +29,7 @@ const int E[48] = {
 };
 
 // S-boxes
-const int S[8][4][16] = {
+const int DEScypher::S[8][4][16] = {
     // S1
     {
         {14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7},
@@ -91,7 +89,7 @@ const int S[8][4][16] = {
 };
 
 // Permutation P
-const int P[32] = {
+const int DEScypher::P[32] = {
     16, 7, 20, 21, 29, 12, 28, 17,
     1, 15, 23, 26, 5, 18, 31, 10,
     2, 8, 24, 14, 32, 27, 3, 9,
@@ -99,7 +97,7 @@ const int P[32] = {
 };
 
 // Final Permutation (IP⁻¹)
-const int FP[64] = {
+const int DEScypher::FP[64] = {
     40, 8, 48, 16, 56, 24, 64, 32,
     39, 7, 47, 15, 55, 23, 63, 31,
     38, 6, 46, 14, 54, 22, 62, 30,
@@ -111,7 +109,7 @@ const int FP[64] = {
 };
 
 // Key schedule tables
-const int PC1[56] = {
+const int DEScypher::PC1[56] = {
     57, 49, 41, 33, 25, 17, 9,
     1, 58, 50, 42, 34, 26, 18,
     10, 2, 59, 51, 43, 35, 27,
@@ -122,7 +120,7 @@ const int PC1[56] = {
     21, 13, 5, 28, 20, 12, 4
 };
 
-const int PC2[48] = {
+const int DEScypher::PC2[48] = {
     14, 17, 11, 24, 1, 5,
     3, 28, 15, 6, 21, 10,
     23, 19, 12, 4, 26, 8,
@@ -133,9 +131,9 @@ const int PC2[48] = {
     46, 42, 50, 36, 29, 32
 };
 
-const int shiftBits[16] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
+const int DEScypher::shiftBits[16] = { 1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1 };
 
-uint64_t permute(uint64_t input, const int* table, int n) {
+uint64_t DEScypher::permute(uint64_t input, const int* table, int n) {
     uint64_t output = 0;
     for (int i = 0; i < n; i++) {
         output <<= 1;
@@ -144,11 +142,11 @@ uint64_t permute(uint64_t input, const int* table, int n) {
     return output;
 }
 
-uint32_t leftRotate(uint32_t value, int shift) {
-    return (value << shift) | (value >> (28 - shift));
+uint32_t DEScypher::leftRotate(uint32_t value, int shift) {
+    return ((value << shift) | (value >> (28 - shift))) & 0x0FFFFFFF;
 }
 
-vector<uint64_t> generateKeys(uint64_t key) {
+vector<uint64_t> DEScypher::generateKeys(uint64_t key) {
     vector<uint64_t> roundKeys;
     
     uint64_t permutedKey = permute(key, PC1, 56);
@@ -168,9 +166,7 @@ vector<uint64_t> generateKeys(uint64_t key) {
     return roundKeys;
 }
 
-uint64_t desEncrypt(uint64_t block, uint64_t key) {
-    vector<uint64_t> roundKeys = generateKeys(key);
-    
+uint64_t DEScypher::desProcess(uint64_t block, const vector<uint64_t>& roundKeys) {
     uint64_t permutedBlock = permute(block, IP, 64);
     
     uint32_t L = (permutedBlock >> 32) & 0xFFFFFFFF;
@@ -179,14 +175,17 @@ uint64_t desEncrypt(uint64_t block, uint64_t key) {
     for (int round = 0; round < 16; round++) {
         uint32_t oldR = R;
         
+        // Expansion
         uint64_t expandedR = 0;
         for (int i = 0; i < 48; i++) {
             expandedR <<= 1;
             expandedR |= (R >> (32 - E[i])) & 1;
         }
         
+        // XOR with round key
         expandedR ^= roundKeys[round];
         
+        // S-box substitution
         uint32_t sboxOutput = 0;
         for (int i = 0; i < 8; i++) {
             int sixBits = (expandedR >> (42 - i * 6)) & 0x3F;
@@ -196,6 +195,7 @@ uint64_t desEncrypt(uint64_t block, uint64_t key) {
             sboxOutput = (sboxOutput << 4) | sboxValue;
         }
         
+        // P permutation
         uint32_t pboxOutput = 0;
         for (int i = 0; i < 32; i++) {
             pboxOutput <<= 1;
@@ -207,20 +207,27 @@ uint64_t desEncrypt(uint64_t block, uint64_t key) {
     }
     
     uint64_t preOutput = ((uint64_t)R << 32) | L;
-    uint64_t ciphertext = permute(preOutput, FP, 64);
-    
-    return ciphertext;
+    return permute(preOutput, FP, 64);
 }
 
-uint64_t stringToBlock(const string& str) {
+uint64_t DEScypher::encrypt(uint64_t block, uint64_t key) {
+    vector<uint64_t> roundKeys = generateKeys(key);
+    return desProcess(block, roundKeys);
+}
+
+uint64_t DEScypher::stringToBlock(const string& str) {
     uint64_t block = 0;
     for (size_t i = 0; i < min(str.length(), size_t(8)); i++) {
         block = (block << 8) | (unsigned char)str[i];
     }
+    // Дополняем нулями если меньше 8 байт
+    if (str.length() < 8) {
+        block <<= (8 - str.length()) * 8;
+    }
     return block;
 }
 
-string blockToString(uint64_t block) {
+string DEScypher::blockToString(uint64_t block) {
     string result;
     for (int i = 7; i >= 0; i--) {
         unsigned char byte = (block >> (i * 8)) & 0xFF;
@@ -229,30 +236,19 @@ string blockToString(uint64_t block) {
     return result;
 }
 
-int main() {
-    setlocale(LC_ALL, "ru_RU.UTF-8");
+string DEScypher::encryptString(const string& plaintext, uint64_t key) {
+    string result;
     
-    string plaintext;
-    uint64_t key;
-    
-    cout << "Введите текст для шифрования (до 8 символов): ";
-    getline(cin, plaintext);
-    
-    cout << "Введите 64-битный ключ в десятичном виде: ";
-    cin >> key;
-    
-    while (plaintext.length() < 8) {
-        plaintext += '\0';
+    for (size_t i = 0; i < plaintext.length(); i += 8) {
+        string chunk = plaintext.substr(i, 8);
+        uint64_t block = stringToBlock(chunk);
+        uint64_t encrypted = encrypt(block, key);
+        
+        // Добавляем зашифрованный блок как 8 байт
+        for (int j = 7; j >= 0; j--) {
+            result += (unsigned char)((encrypted >> (j * 8)) & 0xFF);
+        }
     }
     
-    uint64_t block = stringToBlock(plaintext);
-    
-    cout << "\nИсходный блок: 0x" << hex << setw(16) << setfill('0') << block << dec << endl;
-    
-    uint64_t encrypted = desEncrypt(block, key);
-    
-    cout << "Зашифрованный блок: 0x" << hex << setw(16) << setfill('0') << encrypted << dec << endl;
-    cout << "Зашифрованный текст: " << blockToString(encrypted) << endl;
-    
-    return 0;
+    return result;
 }
