@@ -25,6 +25,7 @@ std::string shifratbasha::decrypt(const std::string& text) {
     return encrypt(text);
 }
 
+#ifndef CRYPTO_COMPONENT_LIBRARY
 int main() {
     shifratbasha enc;
 
@@ -38,3 +39,4 @@ int main() {
 
     return 0;
 }
+#endif
