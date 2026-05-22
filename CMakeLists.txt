@@ -3,7 +3,12 @@ project(Component_for_basic_cryptographic_operations)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(include)
+find_package(OpenSSL REQUIRED)
+
+include_directories(
+        include
+        include/Hash
+        include/Signatures)
 
 add_executable(Component_for_basic_cryptographic_operations
         src/Decription/des.cpp
@@ -21,3 +26,5 @@ add_executable(Component_for_basic_cryptographic_operations
         src/Signatures/SignatureParams.cpp
         src/Signatures/Stribog.cpp
         tests/test1.cpp)
+
+target_link_libraries(Component_for_basic_cryptographic_operations PRIVATE OpenSSL::Crypto)
