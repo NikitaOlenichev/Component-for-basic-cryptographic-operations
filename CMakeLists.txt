@@ -34,6 +34,7 @@ add_executable(unit_tests
         tests/des_tests.cpp
         tests/atbash_tests.cpp)
 
+target_include_directories(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 target_link_libraries(unit_tests PRIVATE crypto_component)
 
 add_test(NAME unit_tests COMMAND unit_tests)
