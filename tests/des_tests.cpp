@@ -1,19 +1,20 @@
-#include "test_framework.h"
+#include <gtest/gtest.h>
 
 #include "DEScypher.h"
 
 #include <cstdint>
 #include <string>
 
-TEST_CASE("DES encryption is deterministic") {
+// ================== DES (encrypt) ==================
+TEST(DesEncryptTest, EncryptionIsDeterministic) {
     const uint64_t plaintext = 0x0123456789ABCDEFULL;
     const uint64_t key = 0x133457799BBCDFF1ULL;
 
-    CHECK_EQUAL(DEScypher::encrypt(plaintext, key), DEScypher::encrypt(plaintext, key));
-    CHECK(DEScypher::encrypt(plaintext, key) != plaintext);
+    EXPECT_EQ(DEScypher::encrypt(plaintext, key), DEScypher::encrypt(plaintext, key));
+    EXPECT_NE(plaintext, DEScypher::encrypt(plaintext, key));
 }
 
-TEST_CASE("DES converts strings to fixed-size blocks") {
-    CHECK_EQUAL(DEScypher::stringToBlock("ABCDEFGH"), 0x4142434445464748ULL);
-    CHECK_EQUAL(DEScypher::blockToString(0x4142434445464748ULL), std::string("ABCDEFGH"));
+TEST(DesEncryptTest, StringToBlockAndBack) {
+    EXPECT_EQ(0x4142434445464748ULL, DEScypher::stringToBlock("ABCDEFGH"));
+    EXPECT_EQ(std::string("ABCDEFGH"), DEScypher::blockToString(0x4142434445464748ULL));
 }

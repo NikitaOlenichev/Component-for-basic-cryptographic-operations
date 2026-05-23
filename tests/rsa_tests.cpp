@@ -1,4 +1,4 @@
-#include "test_framework.h"
+#include <gtest/gtest.h>
 
 #include "rsa_decrypt.h"
 #include "rsa_encrypt.h"
@@ -6,27 +6,28 @@
 #include <string>
 #include <vector>
 
-TEST_CASE("RSA encrypts and decrypts a number") {
+// ================== RSA ==================
+TEST(RsaTest, EncryptDecryptNumber) {
     const long long n = 3233;
     const long long e = 17;
     const long long d = 2753;
     const long long message = 65;
 
     const long long encrypted = RSAEncrypt::encrypt(message, e, n);
-    CHECK_EQUAL(RSADecrypt::decrypt(encrypted, d, n), message);
+    EXPECT_EQ(message, RSADecrypt::decrypt(encrypted, d, n));
 }
 
-TEST_CASE("RSA encrypts and decrypts a string") {
+TEST(RsaTest, EncryptDecryptString) {
     const long long n = 3233;
     const long long e = 17;
     const long long d = 2753;
     const std::string message = "Test";
 
     const std::string encrypted = RSAEncrypt::encryptString(message, e, n);
-    CHECK_EQUAL(RSADecrypt::decryptString(encrypted, d, n), message);
+    EXPECT_EQ(message, RSADecrypt::decryptString(encrypted, d, n));
 }
 
-TEST_CASE("RSA decrypts a vector of encrypted numbers") {
+TEST(RsaTest, DecryptVector) {
     const long long n = 3233;
     const long long e = 17;
     const long long d = 2753;
@@ -37,5 +38,5 @@ TEST_CASE("RSA decrypts a vector of encrypted numbers") {
         encrypted.push_back(RSAEncrypt::encrypt(static_cast<unsigned char>(ch), e, n));
     }
 
-    CHECK_EQUAL(RSADecrypt::decryptVector(encrypted, d, n), message);
+    EXPECT_EQ(message, RSADecrypt::decryptVector(encrypted, d, n));
 }

@@ -1,18 +1,19 @@
-#include "test_framework.h"
+#include <gtest/gtest.h>
 
 #include "shifratbasha.h"
 
 #include <string>
 
-TEST_CASE("Atbash encrypts latin letters") {
+// ================== shifratbasha (Atbash) ==================
+TEST(ShifratbashaTest, EncryptLatinLetters) {
     shifratbasha cipher;
 
-    CHECK_EQUAL(cipher.encrypt("abc XYZ"), std::string("zyx CBA"));
+    EXPECT_EQ(std::string("zyx CBA"), cipher.encrypt("abc XYZ"));
 }
 
-TEST_CASE("Atbash decrypt reverses encryption") {
+TEST(ShifratbashaTest, EncryptDecrypt) {
     shifratbasha cipher;
     const std::string text = "Hello, World!";
 
-    CHECK_EQUAL(cipher.decrypt(cipher.encrypt(text)), text);
+    EXPECT_EQ(text, cipher.decrypt(cipher.encrypt(text)));
 }
