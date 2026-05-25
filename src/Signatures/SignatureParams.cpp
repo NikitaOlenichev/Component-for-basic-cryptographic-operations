@@ -2,7 +2,7 @@
 // Created by Никита on 21.04.2026.
 //
 
-#include "GOSTSignatureInc.h"
+#include "Signatures/GOSTSignature.h"
 
 static std::vector<uint8_t> hexBytes(const std::string& hex) {
     std::vector<uint8_t> bytes;

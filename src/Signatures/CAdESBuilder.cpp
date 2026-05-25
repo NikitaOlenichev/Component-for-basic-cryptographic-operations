@@ -3,7 +3,7 @@
 // добавляя к ней сертификаты и другую служебную информацию.
 //
 
-#include "CAdESBuilder.h"
+#include "Signatures/CAdESBuilder.h"
 #include <algorithm>
 #include <sstream>
 #include <ctime>

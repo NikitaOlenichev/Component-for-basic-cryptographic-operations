@@ -10,7 +10,7 @@
 #include <stdexcept>
 #include <cctype>
 
-#include "BigInteger.h"
+#include "Signatures/BigInteger.h"
 
 BigInteger::BigInteger(){
     this->isNegative = false;

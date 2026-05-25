@@ -1,4 +1,4 @@
-#include "HashCalculate.h"
+#include "Hash/HashCalculate.h"
 
 #include <openssl/evp.h>
 #include <fstream>
@@ -20,7 +20,7 @@ const EVP_MD* getMD(const string& algorithm) {
 string HashCalculate::hashString(const string& input, const string& algorithm) {
     const EVP_MD* md = getMD(algorithm);
     if (!md) {
-        throw runtime_error("Неподдерживаемый алгоритм: " + algorithm);
+        throw runtime_error("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: " + algorithm);
     }
 
     EVP_MD_CTX* context = EVP_MD_CTX_new();
@@ -38,12 +38,12 @@ string HashCalculate::hashString(const string& input, const string& algorithm) {
 string HashCalculate::hashFile(const string& filePath, const string& algorithm) {
     const EVP_MD* md = getMD(algorithm);
     if (!md) {
-        throw runtime_error("Неподдерживаемый алгоритм: " + algorithm);
+        throw runtime_error("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: " + algorithm);
     }
 
     ifstream file(filePath, ios::binary);
     if (!file.is_open()) {
-        throw runtime_error("Не удалось открыть файл");
+        throw runtime_error("пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ");
     }
 
     EVP_MD_CTX* context = EVP_MD_CTX_new();

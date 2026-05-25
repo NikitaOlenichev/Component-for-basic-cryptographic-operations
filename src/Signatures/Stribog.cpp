@@ -5,7 +5,7 @@
 // (https://github.com/Andreyinthesky/cpp-cryptography/blob/master/algorithms/gost_stribog.cpp).
 //
 
-#include "Stribog.h"
+#include "Signatures/Stribog.h"
 #include <cstring>
 #include <algorithm>
 #include <stdexcept>
