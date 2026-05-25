@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_SHARED_LIBS "Build as shared library" ON)
-option(CPPCRYPTO_BUILD_TESTS "Build unit tests" ON)
+option(CPPCRYPTO_BUILD_TESTS "Build unit tests" OFF)
 
 add_compile_definitions(CRYPTOCOMPONENT_BUILD_DLL)
 
