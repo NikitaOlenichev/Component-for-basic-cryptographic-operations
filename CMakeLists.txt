@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.15)
 project(Component_for_basic_cryptographic_operations VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -6,11 +6,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_SHARED_LIBS "Build as shared library" ON)
-option(CPPCRYPTO_BUILD_TESTS "Build unit tests" OFF) # ON
+option(CPPCRYPTO_BUILD_TESTS "Build unit tests" ON)
 
 add_compile_definitions(CRYPTOCOMPONENT_BUILD_DLL)
 
-#find_package(OpenSSL REQUIRED)
+find_package(OpenSSL QUIET)
+set(USE_OPENSSL ${OPENSSL_FOUND})
+if(USE_OPENSSL)
+    message(STATUS "OpenSSL found, enabling hashing functions")
+else()
+    message(STATUS "OpenSSL not found, hashing (MD5, SHA) will be disabled")
+endif()
 
 add_library(Component_for_basic_cryptographic_operations
         src/Decryption/des.cpp
@@ -22,7 +28,6 @@ add_library(Component_for_basic_cryptographic_operations
         src/Encryption/rsa_encrypt.cpp
         src/Encryption/shifratbasha.cpp
         src/Encryption/xorsh.cpp
-        #src/Hash/HashCalculate.cpp
         src/Signatures/BigInteger.cpp
         src/Signatures/CAdESBuilder.cpp
         src/Signatures/SignatureParams.cpp
@@ -30,12 +35,15 @@ add_library(Component_for_basic_cryptographic_operations
         src/CryptoComponent.cpp
 )
 
+if(USE_OPENSSL)
+    target_sources(Component_for_basic_cryptographic_operations PRIVATE src/Hash/HashCalculate.cpp)
+    target_link_libraries(Component_for_basic_cryptographic_operations PRIVATE OpenSSL::Crypto)
+endif()
+
 target_include_directories(Component_for_basic_cryptographic_operations PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
 )
-
-#target_link_libraries(Component_for_basic_cryptographic_operations PRIVATE OpenSSL::Crypto)
 
 include(GNUInstallDirs)
 install(TARGETS Component_for_basic_cryptographic_operations
@@ -44,7 +52,8 @@ install(TARGETS Component_for_basic_cryptographic_operations
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cppcrypto)
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Component_for_basic_cryptographic_operations)
 
 install(EXPORT Component_for_basic_cryptographic_operationsTargets
         FILE Component_for_basic_cryptographic_operationsTargets.cmake
@@ -57,5 +66,17 @@ add_subdirectory(examples)
 if(CPPCRYPTO_BUILD_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
-    add_subdirectory(tests)
+
+    add_executable(unit_tests
+            tests/test_main.cpp
+            tests/hash_tests.cpp
+            tests/rsa_tests.cpp
+            tests/des_tests.cpp
+            tests/atbash_tests.cpp
+    )
+
+    target_include_directories(unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_link_libraries(unit_tests PRIVATE Component_for_basic_cryptographic_operations GTest::gtest_main)
+
+    add_test(NAME unit_tests COMMAND unit_tests)
 endif()
