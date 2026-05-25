@@ -10,6 +10,7 @@ option(CPPCRYPTO_BUILD_TESTS "Build unit tests" ON)
 
 add_compile_definitions(CRYPTOCOMPONENT_BUILD_DLL)
 
+# Поиск OpenSSL
 find_package(OpenSSL QUIET)
 set(USE_OPENSSL ${OPENSSL_FOUND})
 if(USE_OPENSSL)
@@ -18,6 +19,7 @@ else()
     message(STATUS "OpenSSL not found, hashing (MD5, SHA) will be disabled")
 endif()
 
+# Основная библиотека
 add_library(Component_for_basic_cryptographic_operations
         src/Decryption/des.cpp
         src/Decryption/rc4_decrypt.cpp
@@ -35,6 +37,7 @@ add_library(Component_for_basic_cryptographic_operations
         src/CryptoComponent.cpp
 )
 
+# Хеш-функции добавляются только если установлен OpenSSL
 if(USE_OPENSSL)
     target_sources(Component_for_basic_cryptographic_operations PRIVATE src/Hash/HashCalculate.cpp)
     target_link_libraries(Component_for_basic_cryptographic_operations PRIVATE OpenSSL::Crypto)
@@ -45,6 +48,7 @@ target_include_directories(Component_for_basic_cryptographic_operations PUBLIC
         $<INSTALL_INTERFACE:include>
 )
 
+# Установка
 include(GNUInstallDirs)
 install(TARGETS Component_for_basic_cryptographic_operations
         EXPORT Component_for_basic_cryptographic_operationsTargets
@@ -61,8 +65,10 @@ install(EXPORT Component_for_basic_cryptographic_operationsTargets
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Component_for_basic_cryptographic_operations
 )
 
+# Примеры
 add_subdirectory(examples)
 
+# Тесты
 if(CPPCRYPTO_BUILD_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
