@@ -16,6 +16,9 @@ class ModMath {
 public:
     static BigInteger mul_inverse(BigInteger a, BigInteger n) {
         BigInteger u = mod(a, n);
+        if (u == 0) {
+            throw std::runtime_error("Modular inverse does not exist");
+        }
         BigInteger v = n;
         BigInteger x1 = 1;
         BigInteger x2 = 0;

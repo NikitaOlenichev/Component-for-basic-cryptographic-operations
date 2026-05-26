@@ -424,14 +424,14 @@ static std::vector<uint8_t> hexToBytes(const std::string& hex) {
 
 BigInteger BigInteger::fromHex(const std::string& hex) {
     std::vector<uint8_t> bytes = hexToBytes(hex);
-    return from_bytes(bytes, true);
+    return from_bytes(bytes, false);
 }
 
 std::string BigInteger::toHex() const {
     auto bytes = to_bytes();
     std::stringstream ss;
-    for (uint8_t b : bytes) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(b);
+    for (auto it = bytes.rbegin(); it != bytes.rend(); ++it) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(*it);
     }
     return ss.str();
 }
