@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(MSVC)
+    add_compile_options(/utf-8)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+endif()
+
 option(BUILD_SHARED_LIBS "Build as shared library" ON)
 option(CPPCRYPTO_BUILD_TESTS "Build unit tests" OFF)
 option(CPPCRYPTO_BUILD_EXAMPLES "Build examples" ON)
