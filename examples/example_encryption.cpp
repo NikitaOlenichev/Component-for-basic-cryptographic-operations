@@ -1,9 +1,12 @@
 #include <CryptoComponent.h>
+#include "console_utf8.h"
 #include <iostream>
 #include <iomanip>
 #include <vector>
 
 int main() {
+    setupConsoleUtf8();
+
     // RC4
     std::string rc4_key = "secret";
     std::string rc4_plain = "Hello, RC4!";

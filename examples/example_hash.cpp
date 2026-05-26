@@ -1,8 +1,11 @@
 #include <CryptoComponent.h>
+#include "console_utf8.h"
 #include <iostream>
 #include <iomanip>
 
 int main() {
+    setupConsoleUtf8();
+
     std::string text = "Hello, cryptography!";
     std::string key = "supersecret";
 
