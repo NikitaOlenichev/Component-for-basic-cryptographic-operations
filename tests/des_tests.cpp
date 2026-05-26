@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "DEScypher.h"
+#include "Encryption/DEScypher.h"
+#include "Decryption/des.h"
 
 #include <cstdint>
 #include <string>
@@ -17,4 +18,12 @@ TEST(DesEncryptTest, EncryptionIsDeterministic) {
 TEST(DesEncryptTest, StringToBlockAndBack) {
     EXPECT_EQ(0x4142434445464748ULL, DEScypher::stringToBlock("ABCDEFGH"));
     EXPECT_EQ(std::string("ABCDEFGH"), DEScypher::blockToString(0x4142434445464748ULL));
+}
+
+TEST(DesDecryptTest, DecryptBlockRoundTrip) {
+    const uint64_t block = 0x0123456789ABCDEFULL;
+    const uint64_t key = 0x133457799BBCDFF1ULL;
+    const uint64_t encrypted = DEScypher::encrypt(block, key);
+
+    EXPECT_EQ(block, DES::decrypt(encrypted, key));
 }

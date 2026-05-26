@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "shifratbasha.h"
+#include "Encryption/shifratbasha.h"
 
 #include <string>
 
