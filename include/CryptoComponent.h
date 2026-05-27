@@ -12,18 +12,13 @@ namespace cryptocomponent {
 class CRYPTOCOMPONENT_API CryptoComponent {
 public:
     // Хеширование
+#ifdef USE_OPENSSL
     // MD5, SHA
     static CRYPTOCOMPONENT_API std::string md5(const std::string& data);
     static CRYPTOCOMPONENT_API std::string md5File(const std::string& path);
     static CRYPTOCOMPONENT_API std::string sha1(const std::string& data);
     static CRYPTOCOMPONENT_API std::string sha256(const std::string& data);
     static CRYPTOCOMPONENT_API std::string sha512(const std::string& data);
-
-    //ГОСТ Стрибог
-    static CRYPTOCOMPONENT_API std::vector<uint8_t> stribog256(const std::vector<uint8_t>& data);
-    static CRYPTOCOMPONENT_API std::vector<uint8_t> stribog512(const std::vector<uint8_t>& data);
-    static CRYPTOCOMPONENT_API std::string stribog256Hex(const std::string& data);
-    static CRYPTOCOMPONENT_API std::string stribog512Hex(const std::string& data);
 
     // HMAC
     static CRYPTOCOMPONENT_API std::string hmacMD5(const std::string& data, const std::string& key);
@@ -34,6 +29,13 @@ public:
     // Универсальный метод
     static CRYPTOCOMPONENT_API std::string hash(const std::string& data, const std::string& algorithm);
     static CRYPTOCOMPONENT_API std::string hashFile(const std::string& path, const std::string& algorithm);
+#endif
+
+    //ГОСТ Стрибог
+    static CRYPTOCOMPONENT_API std::vector<uint8_t> stribog256(const std::vector<uint8_t>& data);
+    static CRYPTOCOMPONENT_API std::vector<uint8_t> stribog512(const std::vector<uint8_t>& data);
+    static CRYPTOCOMPONENT_API std::string stribog256Hex(const std::string& data);
+    static CRYPTOCOMPONENT_API std::string stribog512Hex(const std::string& data);
 
     // Симметричное шифрование
     // RC4

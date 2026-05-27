@@ -49,6 +49,7 @@ add_library(Component_for_basic_cryptographic_operations
 if(USE_OPENSSL)
     target_sources(Component_for_basic_cryptographic_operations PRIVATE src/Hash/HashCalculate.cpp)
     target_link_libraries(Component_for_basic_cryptographic_operations PRIVATE OpenSSL::Crypto)
+    target_compile_definitions(Component_for_basic_cryptographic_operations PUBLIC USE_OPENSSL)
 endif()
 
 target_include_directories(Component_for_basic_cryptographic_operations PUBLIC

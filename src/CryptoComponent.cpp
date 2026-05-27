@@ -5,7 +5,9 @@
 #include "Encryption/rc4_encrypt.h"
 #include "Encryption/shifratbasha.h"
 #include "Encryption/xorsh.h"
+#ifdef USE_OPENSSL
 #include "Hash/HashCalculate.h"
+#endif
 #include "Signatures/Stribog.h"
 #include "Signatures/GOSTSignature.h"
 #include "Signatures/CAdESBuilder.h"
@@ -47,6 +49,7 @@ namespace {
 }
 
 // Хеширование
+#ifdef USE_OPENSSL
 std::string CryptoComponent::md5(const std::string& data) {
     return HashCalculate::hashString(data, "MD5");
 }
@@ -67,6 +70,31 @@ std::string CryptoComponent::sha512(const std::string& data) {
     return HashCalculate::hashString(data, "SHA512");
 }
 
+std::string CryptoComponent::hmacMD5(const std::string& data, const std::string& key) {
+    return HashCalculate::hmacString(data, key, "MD5");
+}
+
+std::string CryptoComponent::hmacSHA1(const std::string& data, const std::string& key) {
+    return HashCalculate::hmacString(data, key, "SHA1");
+}
+
+std::string CryptoComponent::hmacSHA256(const std::string& data, const std::string& key) {
+    return HashCalculate::hmacString(data, key, "SHA256");
+}
+
+std::string CryptoComponent::hmacSHA512(const std::string& data, const std::string& key) {
+    return HashCalculate::hmacString(data, key, "SHA512");
+}
+
+std::string CryptoComponent::hash(const std::string& data, const std::string& algorithm) {
+    return HashCalculate::hashString(data, algorithm);
+}
+
+std::string CryptoComponent::hashFile(const std::string& path, const std::string& algorithm) {
+    return HashCalculate::hashFile(path, algorithm);
+}
+#endif
+
 std::vector<uint8_t> CryptoComponent::stribog256(const std::vector<uint8_t>& data) {
     return Stribog::hash256(data);
 }
@@ -85,30 +113,6 @@ std::string CryptoComponent::stribog512Hex(const std::string& data) {
     std::vector<uint8_t> bytes(data.begin(), data.end());
     auto hash = stribog512(bytes);
     return bytesToHex(hash);
-}
-
-std::string CryptoComponent::hmacMD5(const std::string& data, const std::string& key) {
-return HashCalculate::hmacString(data, key, "MD5");
-}
-
-std::string CryptoComponent::hmacSHA1(const std::string& data, const std::string& key) {
-return HashCalculate::hmacString(data, key, "SHA1");
-}
-
-std::string CryptoComponent::hmacSHA256(const std::string& data, const std::string& key) {
-return HashCalculate::hmacString(data, key, "SHA256");
-}
-
-std::string CryptoComponent::hmacSHA512(const std::string& data, const std::string& key) {
-return HashCalculate::hmacString(data, key, "SHA512");
-}
-
-std::string CryptoComponent::hash(const std::string& data, const std::string& algorithm) {
-return HashCalculate::hashString(data, algorithm);
-}
-
-std::string CryptoComponent::hashFile(const std::string& path, const std::string& algorithm) {
-return HashCalculate::hashFile(path, algorithm);
 }
 
 // Симметричное шифрование
@@ -237,4 +241,4 @@ std::vector<uint8_t> CryptoComponent::cadesWrap(const std::vector<uint8_t>& sign
     return builder.buildCAdES_BES(sigData);
 }
 
-} // namespace cppcrypto
+} // namespace cryptocomponent
